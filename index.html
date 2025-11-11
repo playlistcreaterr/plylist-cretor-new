@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Playlist Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('bgimage.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* Welcome Screen Styles */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .welcome-screen.hidden {
+            animation: fadeOut 0.6s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+        
+        .welcome-content {
+            text-align: center;
+            animation: slideUp 1s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .welcome-title {
+            font-size: 5em;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            letter-spacing: -2px;
+            text-shadow: 4px 4px 20px rgba(0, 0, 0, 0.3);
+            filter: drop-shadow(0 4px 15px rgba(102, 126, 234, 0.6));
+            animation: glow 3s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% {
+                filter: drop-shadow(0 4px 15px rgba(102, 126, 234, 0.6));
+            }
+            50% {
+                filter: drop-shadow(0 8px 30px rgba(102, 126, 234, 0.9));
+            }
+        }
+        
+        .welcome-subtitle {
+            font-size: 2em;
+            font-weight: 600;
+            color: white;
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.8),
+                         0 0 20px rgba(102, 126, 234, 0.5);
+            margin-bottom: 50px;
+            animation: fadeInSlow 1.5s ease-out;
+        }
+        
+        @keyframes fadeInSlow {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .welcome-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 25px 60px;
+            border-radius: 50px;
+            font-size: 1.5em;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.6),
+                        0 0 60px rgba(118, 75, 162, 0.4);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        .welcome-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+        
+        .welcome-button:hover::before {
+            left: 100%;
+        }
+        
+        .welcome-button:hover {
+            transform: translateY(-5px) scale(1.08);
+            box-shadow: 0 15px 60px rgba(102, 126, 234, 0.8),
+                        0 0 80px rgba(118, 75, 162, 0.6);
+        }
+        
+        .welcome-button:active {
+            transform: translateY(-2px) scale(1.05);
+        }
+        
+        /* Main App Styles */
+        .main-app {
+            display: none;
+            width: 100%;
+            animation: slideInUp 0.8s ease-out;
+        }
+        
+        .main-app.active {
+            display: block;
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(5px);
+            border-radius: 30px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3), 
+                        0 0 0 2px rgba(255, 255, 255, 0.5);
+            max-width: 850px;
+            width: 100%;
+            padding: 50px;
+            position: relative;
+            z-index: 1;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            font-weight: 800;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            filter: drop-shadow(0 2px 8px rgba(102, 126, 234, 0.4));
+        }
+        
+        .subtitle {
+            color: #333;
+            font-size: 1.1em;
+            font-weight: 500;
+            text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.8);
+        }
+        
+        .auth-section {
+            margin-bottom: 35px;
+            padding: 25px;
+            background: rgba(248, 249, 250, 0.3);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(3px);
+        }
+        
+        .auth-section:hover {
+            border-color: rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            font-size: 1.05em;
+        }
+        
+        .status-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulseStatus 2s infinite;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+        }
+        
+        .status-indicator.connected {
+            background: #28a745;
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.6);
+        }
+        
+        @keyframes pulseStatus {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+        
+        .user-info {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            font-size: 0.95em;
+            color: #333;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+            display: none;
+        }
+        
+        .user-info.active {
+            display: block;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 12px;
+            font-size: 1.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
+        }
+        
+        .btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-switch {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 10px 25px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #222;
+            font-weight: 700;
+            font-size: 1.05em;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(3px);
+            color: #222;
+            font-weight: 500;
+        }
+        
+        input[type="text"]::placeholder, textarea::placeholder {
+            color: rgba(0, 0, 0, 0.5);
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.8);
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 220px;
+            line-height: 1.6;
+        }
+        
+        .helper-text {
+            font-size: 0.9em;
+            color: #333;
+            margin-top: 8px;
+            font-style: italic;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        .privacy-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(248, 249, 250, 0.3);
+            border-radius: 12px;
+            transition: background 0.3s;
+            backdrop-filter: blur(3px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        
+        .privacy-toggle:hover {
+            background: rgba(248, 249, 250, 0.5);
+        }
+        
+        .privacy-toggle label {
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        .privacy-toggle input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        
+        #result {
+            margin-top: 35px;
+            padding: 25px;
+            border-radius: 15px;
+            display: none;
+            animation: slideIn 0.4s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        #result.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        
+        #result.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+        
+        .playlist-link {
+            margin-top: 20px;
+            padding: 18px;
+            background: white;
+            border-radius: 12px;
+            word-break: break-all;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .playlist-link a {
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .playlist-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 25px;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .playlist-form {
+            display: none;
+        }
+        
+        .playlist-form.active {
+            display: block;
+            animation: fadeInForm 0.5s ease-out;
+        }
+        
+        @keyframes fadeInForm {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .decorative-circle {
+            position: fixed;
+            border-radius: 50%;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            top: -100px;
+            right: -100px;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .circle-2 {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            bottom: -50px;
+            left: -50px;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, 30px); }
+        }
+        
+        @media (max-width: 768px) {
+            .welcome-title {
+                font-size: 3em;
+            }
+            
+            .welcome-subtitle {
+                font-size: 1.5em;
+            }
+            
+            .welcome-button {
+                padding: 20px 50px;
+                font-size: 1.2em;
+            }
+            
+            .container {
+                padding: 30px 25px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .subtitle {
+                font-size: 1em;
+            }
+            
+            .btn-switch {
+                margin-left: 0;
+                margin-top: 10px;
+                display: block;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="decorative-circle circle-1"></div>
+    <div class="decorative-circle circle-2"></div>
+    
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+            <h1 class="welcome-title">Welcome Buddy! 👋</h1>
+            <p class="welcome-subtitle">Create Amazing YouTube Playlists</p>
+            <button class="welcome-button" onclick="startApp()">Let's Get Started 🚀</button>
+        </div>
+    </div>
+    
+    <!-- Main App -->
+    <div class="main-app" id="mainApp">
+        <div class="container">
+            <div class="header">
+                <h1>🎬 YouTube Playlist Creator</h1>
+                <p class="subtitle">Transform bulk video links into beautiful playlists</p>
+            </div>
+            
+            <div class="auth-section">
+                <div class="status">
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span id="statusText">Not connected to Google</span>
+                </div>
+                <div class="user-info" id="userInfo"></div>
+                <button class="btn" id="authButton" onclick="handleAuth()">Sign in with Google</button>
+                <button class="btn btn-switch" id="switchButton" onclick="switchAccount()" style="display: none;">Switch Account</button>
+            </div>
+            
+            <div class="playlist-form" id="playlistForm">
+                <div class="form-group">
+                    <label for="playlistName">Playlist Name *</label>
+                    <input type="text" id="playlistName" placeholder="Enter your awesome playlist name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="playlistDescription">Description (Optional)</label>
+                    <input type="text" id="playlistDescription" placeholder="Add a description for your playlist">
+                </div>
+                
+                <div class="privacy-toggle">
+                    <input type="checkbox" id="privatePlaylist">
+                    <label for="privatePlaylist" style="margin: 0;">🔒 Make playlist private</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoLinks">Video Links *</label>
+                    <textarea id="videoLinks" placeholder="Paste YouTube video links here (one per line)&#10;&#10;Example:&#10;https://www.youtube.com/watch?v=dQw4w9WgXcQ&#10;https://youtu.be/dQw4w9WgXcQ&#10;https://www.youtube.com/shorts/abc123"></textarea>
+                    <div class="helper-text">✨ Supports: youtube.com/watch?v=, youtu.be/, and YouTube Shorts links</div>
+                </div>
+                
+                <button class="btn" onclick="createPlaylist()" id="createBtn">🚀 Create Playlist</button>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>✨ Creating your amazing playlist...</p>
+                </div>
+                
+                <div id="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        let accessToken = null;
+        let tokenClient = null;
+        let currentUserEmail = null;
+        const CLIENT_ID = '239253385351-fhsu51bkg7po09up7rihbu739c80g647.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.email';
+
+        function startApp() {
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const mainApp = document.getElementById('mainApp');
+            
+            welcomeScreen.classList.add('hidden');
+            setTimeout(() => {
+                welcomeScreen.style.display = 'none';
+                mainApp.classList.add('active');
+            }, 600);
+        }
+
+        function initClient() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                prompt: 'consent',
+                callback: async (response) => {
+                    if (response.access_token) {
+                        accessToken = response.access_token;
+                        console.log('Token received successfully');
+                        await getUserInfo();
+                        updateAuthStatus(true);
+                    } else if (response.error) {
+                        console.error('Auth error:', response.error);
+                        showResult('❌ Authentication failed: ' + response.error, 'error');
+                    }
+                },
+            });
+        }
+
+        async function getUserInfo() {
+            try {
+                const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUserEmail = data.email;
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+            }
+        }
+
+        function handleAuth() {
+            if (CLIENT_ID === 'YOUR_CLIENT_ID_HERE') {
+                alert('Please configure your Google API Client ID first!\n\nReplace YOUR_CLIENT_ID_HERE in the code with your actual Client ID from Google Cloud Console.');
+                return;
+            }
+            
+            if (accessToken) {
+                accessToken = null;
+                currentUserEmail = null;
+                updateAuthStatus(false);
+                showResult('✅ Signed out successfully. Please sign in with your account.', 'success');
+            } else {
+                tokenClient.requestAccessToken({
+                    prompt: 'consent select_account'
+                });
+            }
+        }
+
+        function switchAccount() {
+            accessToken = null;
+            currentUserEmail = null;
+            updateAuthStatus(false);
+            setTimeout(() => {
+                tokenClient.requestAccessToken({
+                    prompt: 'consent select_account'
+                });
+            }, 300);
+        }
+
+        function updateAuthStatus(isConnected) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const authButton = document.getElementById('authButton');
+            const switchButton = document.getElementById('switchButton');
+            const playlistForm = document.getElementById('playlistForm');
+            const resultDiv = document.getElementById('result');
+            const userInfo = document.getElementById('userInfo');
+            
+            if (isConnected) {
+                indicator.classList.add('connected');
+                statusText.textContent = '✅ Connected to Google';
+                authButton.textContent = 'Sign Out';
+                switchButton.style.display = 'inline-block';
+                playlistForm.classList.add('active');
+                
+                if (currentUserEmail) {
+                    userInfo.textContent = `👤 Signed in as: ${currentUserEmail}`;
+                    userInfo.classList.add('active');
+                }
+            } else {
+                indicator.classList.remove('connected');
+                statusText.textContent = 'Not connected to Google';
+                authButton.textContent = 'Sign in with Google';
+                switchButton.style.display = 'none';
+                playlistForm.classList.remove('active');
+                resultDiv.style.display = 'none';
+                userInfo.classList.remove('active');
+            }
+        }
+
+        function extractVideoId(url) {
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        async function createPlaylist() {
+            const playlistName = document.getElementById('playlistName').value.trim();
+            const playlistDescription = document.getElementById('playlistDescription').value.trim();
+            const videoLinks = document.getElementById('videoLinks').value.trim();
+            const isPrivate = document.getElementById('privatePlaylist').checked;
+            const resultDiv = document.getElementById('result');
+            const loading = document.getElementById('loading');
+            const createBtn = document.getElementById('createBtn');
+
+            if (!playlistName) {
+                showResult('⚠️ Please enter a playlist name', 'error');
+                return;
+            }
+
+            if (!videoLinks) {
+                showResult('⚠️ Please enter at least one video link', 'error');
+                return;
+            }
+
+            const links = videoLinks.split('\n').filter(link => link.trim());
+            const videoIds = links.map(link => extractVideoId(link.trim())).filter(id => id);
+
+            if (videoIds.length === 0) {
+                showResult('❌ No valid YouTube video links found. Please check your links.', 'error');
+                return;
+            }
+
+            if (!accessToken) {
+                showResult('❌ Please sign in with your Google account first.', 'error');
+                return;
+            }
+
+            createBtn.disabled = true;
+            loading.style.display = 'block';
+            resultDiv.style.display = 'none';
+
+            try {
+                const playlistResponse = await fetch('https://www.googleapis.com/youtube/v3/playlists?part=snippet,status', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        snippet: {
+                            title: playlistName,
+                            description: playlistDescription || 'Created with YouTube Playlist Creator',
+                        },
+                        status: {
+                            privacyStatus: isPrivate ? 'private' : 'public'
+                        }
+                    })
+                });
+
+                if (!playlistResponse.ok) {
+                    const errorData = await playlistResponse.json();
+                    console.error('Playlist creation failed:', errorData);
+                    console.error('Status:', playlistResponse.status);
+                    console.error('Using email:', currentUserEmail);
+                    
+                    let errorMsg = '❌ Failed to create playlist. ';
+                    if (errorData.error?.message) {
+                        errorMsg += errorData.error.message;
+                    } else {
+                        errorMsg += 'Error code: ' + playlistResponse.status;
+                    }
+                    throw new Error(errorMsg);
+                }
+
+                const playlistData = await playlistResponse.json();
+                const playlistId = playlistData.id;
+
+                let successCount = 0;
+                let failCount = 0;
+
+                for (const videoId of videoIds) {
+                    try {
+                        const addResponse = await fetch('https://www.googleapis.com/youtube/v3/playlistItems?part=snippet', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                snippet: {
+                                    playlistId: playlistId,
+                                    resourceId: {
+                                        kind: 'youtube#video',
+                                        videoId: videoId
+                                    }
+                                }
+                            })
+                        });
+
+                        if (addResponse.ok) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                        }
+                    } catch (error) {
+                        failCount++;
+                    }
+                }
+
+                const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
+                let message = `🎉 Playlist created successfully for ${currentUserEmail}!<br><br>`;
+                message += `✅ ${successCount} video(s) added successfully`;
+                if (failCount > 0) {
+                    message += `<br>⚠️ ${failCount} video(s) failed (may be private/deleted)`;
+                }
+                message += `<div class="playlist-link">🔗 <a href="${playlistUrl}" target="_blank">${playlistUrl}</a></div>`;
+
+                showResult(message, 'success');
+
+                document.getElementById('playlistName').value = '';
+                document.getElementById('playlistDescription').value = '';
+                document.getElementById('videoLinks').value = '';
+                document.getElementById('privatePlaylist').checked = false;
+
+            } catch (error) {
+                showResult('❌ Error creating playlist: ' + error.message, 'error');
+            } finally {
+                createBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = message;
+            resultDiv.className = type;
+            resultDiv.style.display = 'block';
+        }
+
+        window.onload = () => {
+            setTimeout(() => {
+                if (typeof google !== 'undefined') {
+                    initClient();
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
